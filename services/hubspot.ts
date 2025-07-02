@@ -76,7 +76,8 @@ class HubSpotService {
       return await response.json();
     } catch (error) {
       console.error('HubSpot API request failed:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new Error(errorMessage);
     }
   }
 
@@ -121,13 +122,10 @@ class HubSpotService {
 
   // Contact Methods
   async createContact(contactData: HubSpotContact) {
-    const [firstname, ...lastnameParts] = contactData.firstname.split(' ');
-    const lastname = lastnameParts.join(' ') || '';
-
     const properties = {
       email: contactData.email,
-      firstname: firstname,
-      lastname: lastname,
+      firstname: contactData.firstname,
+      lastname: contactData.lastname,
       jobtitle: contactData.jobtitle,
       phone: contactData.phone,
       company: contactData.company,
@@ -239,7 +237,8 @@ class HubSpotService {
       const response = await this.makeRequest('/crm/v3/objects/companies?limit=1');
       return { success: true, data: response };
     } catch (error) {
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return { success: false, error: errorMessage };
     }
   }
 }

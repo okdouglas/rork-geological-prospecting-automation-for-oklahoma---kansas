@@ -41,7 +41,8 @@ const HubSpotSyncButton: React.FC<HubSpotSyncButtonProps> = ({ type, id, style }
         Alert.alert('Error', `Failed to sync ${type} to HubSpot`);
       }
     } catch (error) {
-      Alert.alert('Error', `Sync failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert('Error', `Sync failed: ${errorMessage}`);
     } finally {
       setSyncing(false);
     }

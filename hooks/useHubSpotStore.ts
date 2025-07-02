@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { hubspotService, HubSpotConfig } from '@/services/hubspot';
+import { Company } from '@/types';
+import { Contact } from '@/types';
+import { Permit } from '@/types';
 
 interface HubSpotSyncStatus {
   isConfigured: boolean;
@@ -76,8 +79,9 @@ export const useHubSpotStore = create<HubSpotStore>()(
         
         try {
           // Get company data from store
-          const { companies } = await import('@/hooks/useCompanyStore');
-          const company = companies.find(c => c.id === companyId);
+          const { useCompanyStore } = await import('@/hooks/useCompanyStore');
+          const companyStore = useCompanyStore.getState();
+          const company = companyStore.companies.find((c: Company) => c.id === companyId);
           
           if (!company) {
             addSyncError(`Company ${companyId} not found`);
@@ -109,7 +113,8 @@ export const useHubSpotStore = create<HubSpotStore>()(
 
           return true;
         } catch (error) {
-          addSyncError(`Failed to sync company: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          addSyncError(`Failed to sync company: ${errorMessage}`);
           return false;
         }
       },
@@ -119,23 +124,32 @@ export const useHubSpotStore = create<HubSpotStore>()(
         
         try {
           // Get contact data from store
-          const { contacts } = await import('@/hooks/useContactStore');
-          const { companies } = await import('@/hooks/useCompanyStore');
+          const { useContactStore } = await import('@/hooks/useContactStore');
+          const { useCompanyStore } = await import('@/hooks/useCompanyStore');
           
-          const contact = contacts.find(c => c.id === contactId);
+          const contactStore = useContactStore.getState();
+          const companyStore = useCompanyStore.getState();
+          
+          const contact = contactStore.contacts.find((c: Contact) => c.id === contactId);
           if (!contact) {
             addSyncError(`Contact ${contactId} not found`);
             return false;
           }
 
-          const company = companies.find(c => c.id === contact.companyId);
+          const company = companyStore.companies.find((c: Company) => c.id === contact.companyId);
 
           // Check if contact already exists
           const existingContact = await hubspotService.searchContactByEmail(contact.email);
           
+          // Split name into first and last name
+          const nameParts = contact.name.split(' ');
+          const firstname = nameParts[0] || '';
+          const lastname = nameParts.slice(1).join(' ') || '';
+          
           const hubspotData = {
             email: contact.email,
-            firstname: contact.name,
+            firstname: firstname,
+            lastname: lastname,
             jobtitle: contact.title,
             phone: contact.phone,
             company: company?.name || '',
@@ -164,7 +178,8 @@ export const useHubSpotStore = create<HubSpotStore>()(
 
           return true;
         } catch (error) {
-          addSyncError(`Failed to sync contact: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          addSyncError(`Failed to sync contact: ${errorMessage}`);
           return false;
         }
       },
@@ -176,9 +191,10 @@ export const useHubSpotStore = create<HubSpotStore>()(
         clearSyncErrors();
         
         try {
-          const { companies } = await import('@/hooks/useCompanyStore');
+          const { useCompanyStore } = await import('@/hooks/useCompanyStore');
+          const companyStore = useCompanyStore.getState();
           
-          for (const company of companies) {
+          for (const company of companyStore.companies) {
             await get().syncCompany(company.id);
           }
           
@@ -190,7 +206,8 @@ export const useHubSpotStore = create<HubSpotStore>()(
             }
           }));
         } catch (error) {
-          get().addSyncError(`Bulk sync failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          get().addSyncError(`Bulk sync failed: ${errorMessage}`);
           setSyncing(false);
         }
       },
@@ -202,9 +219,10 @@ export const useHubSpotStore = create<HubSpotStore>()(
         clearSyncErrors();
         
         try {
-          const { contacts } = await import('@/hooks/useContactStore');
+          const { useContactStore } = await import('@/hooks/useContactStore');
+          const contactStore = useContactStore.getState();
           
-          for (const contact of contacts) {
+          for (const contact of contactStore.contacts) {
             await get().syncContact(contact.id);
           }
           
@@ -216,7 +234,8 @@ export const useHubSpotStore = create<HubSpotStore>()(
             }
           }));
         } catch (error) {
-          get().addSyncError(`Bulk sync failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          get().addSyncError(`Bulk sync failed: ${errorMessage}`);
           setSyncing(false);
         }
       },
@@ -225,18 +244,22 @@ export const useHubSpotStore = create<HubSpotStore>()(
         const { addSyncError } = get();
         
         try {
-          const { permits } = await import('@/hooks/usePermitStore');
-          const { companies } = await import('@/hooks/useCompanyStore');
-          const { contacts } = await import('@/hooks/useContactStore');
+          const { usePermitStore } = await import('@/hooks/usePermitStore');
+          const { useCompanyStore } = await import('@/hooks/useCompanyStore');
+          const { useContactStore } = await import('@/hooks/useContactStore');
           
-          const permit = permits.find(p => p.id === permitId);
+          const permitStore = usePermitStore.getState();
+          const companyStore = useCompanyStore.getState();
+          const contactStore = useContactStore.getState();
+          
+          const permit = permitStore.permits.find((p: Permit) => p.id === permitId);
           if (!permit) {
             addSyncError(`Permit ${permitId} not found`);
             return false;
           }
 
-          const company = companies.find(c => c.id === permit.companyId);
-          const companyContacts = contacts.filter(c => c.companyId === permit.companyId);
+          const company = companyStore.companies.find((c: Company) => c.id === permit.companyId);
+          const companyContacts = contactStore.contacts.filter((c: Contact) => c.companyId === permit.companyId);
 
           const dealData = {
             dealname: `${company?.name || 'Unknown'} - ${permit.formationTarget} Opportunity`,
@@ -260,7 +283,7 @@ export const useHubSpotStore = create<HubSpotStore>()(
 
           // Associate with primary contact
           if (companyContacts.length > 0) {
-            const primaryContact = companyContacts.find(c => c.title.includes('Chief') || c.title.includes('VP')) 
+            const primaryContact = companyContacts.find((c: Contact) => c.title.includes('Chief') || c.title.includes('VP')) 
                                  || companyContacts[0];
             
             const existingContact = await hubspotService.searchContactByEmail(primaryContact.email);
@@ -278,7 +301,8 @@ export const useHubSpotStore = create<HubSpotStore>()(
 
           return true;
         } catch (error) {
-          addSyncError(`Failed to create deal: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          addSyncError(`Failed to create deal: ${errorMessage}`);
           return false;
         }
       },
