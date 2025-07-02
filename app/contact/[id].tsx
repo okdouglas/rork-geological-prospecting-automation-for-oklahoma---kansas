@@ -15,6 +15,7 @@ import {
 import { colors } from '@/constants/colors';
 import { useContactStore } from '@/hooks/useContactStore';
 import { useCompanyStore } from '@/hooks/useCompanyStore';
+import HubSpotSyncButton from '@/components/HubSpotSyncButton';
 
 export default function ContactDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -63,6 +64,10 @@ export default function ContactDetailsScreen() {
             <Text style={styles.companyName}>{company.name}</Text>
           </View>
         )}
+        
+        <View style={styles.syncButtonContainer}>
+          <HubSpotSyncButton type="contact" id={contact.id} />
+        </View>
       </View>
       
       <View style={styles.actionsContainer}>
@@ -208,10 +213,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
   companyName: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  syncButtonContainer: {
+    alignSelf: 'flex-start',
   },
   actionsContainer: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ import { useContactStore } from '@/hooks/useContactStore';
 import { usePermitStore } from '@/hooks/usePermitStore';
 import ContactCard from '@/components/ContactCard';
 import PermitCard from '@/components/PermitCard';
+import HubSpotSyncButton from '@/components/HubSpotSyncButton';
 
 export default function CompanyDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -77,6 +78,10 @@ export default function CompanyDetailsScreen() {
           <Text style={[styles.infoText, { color: getActivityColor(company.drillingActivityLevel) }]}>
             {company.drillingActivityLevel} drilling activity
           </Text>
+        </View>
+        
+        <View style={styles.syncButtonContainer}>
+          <HubSpotSyncButton type="company" id={company.id} />
         </View>
       </View>
       
@@ -220,6 +225,10 @@ const styles = StyleSheet.create({
   infoText: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  syncButtonContainer: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
   },
   detailsCard: {
     backgroundColor: 'white',

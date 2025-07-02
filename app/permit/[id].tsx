@@ -15,6 +15,7 @@ import { usePermitStore } from '@/hooks/usePermitStore';
 import { useCompanyStore } from '@/hooks/useCompanyStore';
 import { useWorkflowStore } from '@/hooks/useWorkflowStore';
 import { formations } from '@/constants/formations';
+import HubSpotSyncButton from '@/components/HubSpotSyncButton';
 
 export default function PermitDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -92,6 +93,10 @@ export default function PermitDetailsScreen() {
           </Text>
           <ChevronRight size={16} color={colors.textSecondary} />
         </TouchableOpacity>
+        
+        <View style={styles.syncButtonContainer}>
+          <HubSpotSyncButton type="permit" id={permit.id} />
+        </View>
       </View>
       
       <View style={styles.detailsCard}>
@@ -206,11 +211,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
   companyName: {
     fontSize: 16,
     color: colors.textSecondary,
     flex: 1,
+  },
+  syncButtonContainer: {
+    alignSelf: 'flex-start',
   },
   detailsCard: {
     backgroundColor: 'white',
